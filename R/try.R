@@ -20,6 +20,9 @@ occ_download(scientificName = names[1])
 key <- name_suggest(q=names[1], rank='species')$key[1]
 occ_search(taxonKey=key, limit=20)
 
+# need to do occ_download or directly from website
+# spocc::occ or rgbif::occ_search are made for retrieving small number of species
+# API cannot be used to download all actinoperigii fish (or loop through species)
 occ_download(paste0('taxonKey = ',key), format = "SIMPLE_CSV",
              user = 'vbarbarossa', pwd = '1Rocker..11', email = 'v.barbarossa@fnwi.ru.nl')
 
