@@ -26,4 +26,6 @@ occ_search(taxonKey=key, limit=20)
 occ_download(paste0('taxonKey = ',key), format = "SIMPLE_CSV",
              user = 'vbarbarossa', pwd = '1Rocker..11', email = 'v.barbarossa@fnwi.ru.nl')
 
+occ_download(parsenames(ref_names))
+
 
