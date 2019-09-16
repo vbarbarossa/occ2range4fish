@@ -14,6 +14,6 @@ keys <- unique(do.call('c',map(ref_names, function(x) name_backbone(name = x)$us
 occ_download(paste0('taxonKey=',paste(keys,collapse = ',')), format = "SIMPLE_CSV",
              user = 'vbarbarossa', pwd = '1Rocker..11', email = 'v.barbarossa@fnwi.ru.nl')
 
-
+# need to say only those with location, also there are more names in fishbase not included in tedesco
 
 
