@@ -14,10 +14,10 @@ options(FISHBASE_VERSION="19.04")
 # sl <- species_list(Class = 'Actinopterygii')
 # get metadata about freshwater or not
 
-fishbase <- taxonomy() %>% # get all species available (vector)
+fb <- taxonomy() %>% # get all species available (vector)
   species(.) %>% # get species table for all species
   filter(Fresh == -1) #select only freshwater
-ref_fishbase <- unique(fishbase$Species)
+ref_fishbase <- unique(fb$Species)
 
 # species shared between tedesco and fishbase
 sum(ref_fishbase %in% ref_ted) #12207
