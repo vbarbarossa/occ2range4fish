@@ -7,7 +7,7 @@ library(valerioUtils)
 libinv(c('rredlist','dplyr'))
 
 token <- 'd361026f05b472e57b0ffe1fa5c9a768aaf3d8391abbb464293e9efe2bbbf733'
-NC = 16 #no cores to use
+NC = 22 #no cores to use
 # read table of names retrieved from fishbase
 tab <- read.csv('proc/names_fishbase.csv',stringsAsFactors = F)
 names <- unique(tab$name_synonym)
@@ -30,7 +30,7 @@ iucn <- parallel::mcmapply(function(i) {
       name_src = names[i])
   }
   return(res)
-},1:20,SIMPLIFY = FALSE,mc.cores = NC) %>% 
+},1:length(names),SIMPLIFY = FALSE,mc.cores = NC) %>% 
   do.call('rbind',.) %>%
   distinct() # removes eventual duplicated rows
 # Sys.time() - st
