@@ -1,10 +1,10 @@
 #Valerio Barbarossa
 # stript that compiles the occurrence records from the different datasets
 # ala.org.ay
-pacman::p_load(tidyverse,vroom)
+library(valerioUtils)
+libinv(c('dplyr','vroom'))
 
-dir_data <- '/vol/milkunarc/vbarbarossa/data/fish_databases/'
-system(paste0('ls ',dir_data,'splink.org'))
+dir_data <- '../data/fish_databases/'
 
 #ala
 ala <- vroom(paste0(dir_data,'ala.org.au/Fishes-brief.csv'),delim = ',') %>%
@@ -41,25 +41,15 @@ splink <- vroom(paste0(dir_data,'splink.org/speciesLink_all_112728_2019091710163
   select(name = scientificname,lon = longitude,lat = latitude) %>%
   .[!is.na(.$lon) & !is.na(.$name),]
 
-# make it as a separate script "species_and_synonyms"
+# read reference names that should be used to filter the data
+tab <- read.csv('proc/names_fishbase.csv',stringsAsFactors = F)
 
-# read species compiled by Tedesco et al. 2018 Scientific Data-----------------------------
-# and use it as a reference to select freshwater fish species
-ref_ted <- read.csv('/vol/milkunarc/vbarbarossa/data/Tedesco/Occurrence_Table.csv',sep=';')
-ref_ted <- unique(c(
-  gsub('\\.',' ',ref_ted$X6.Fishbase.Valid.Species.Name)
-  ,gsub('\\.',' ',ref_ted$X2.Species.Name.in.Source)
-))
+# bind and filter occurrence records
+occ <- rbind(ala,fishnet,gbif,bra,splink) %>%
+  filter(name %in% tab$name_synonym) %>%
+  select(name_src = name,lon,lat)
 
-library(rfishbase)
-options(FISHBASE_VERSION="19.04")
-# make a table with all possible synonyms to maximize overlap datasets
-fb <- taxonomy() %>% # get all species available (vector)
-  species(.) %>% # get species table for all species
-  filter(Fresh == -1) #select only freshwater
-ref_fishbase <- unique(fb$Species)
-
-fb_syn = synonyms(c(ref_fishbase,ref_ted)) %>%
-  select(name = Species, synonym = synonym)
-# NAs in name and not in synonym.. something is wrong, maybe better do it the other way
+o2 <- left_join(occ,tab,by=c('name_src'='name_synonym'))
+# 2.2M records
+#
 
