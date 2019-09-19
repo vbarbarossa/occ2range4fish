@@ -5,15 +5,16 @@
 # check with IUCN names
 library(rredlist)
 token <- 'd361026f05b472e57b0ffe1fa5c9a768aaf3d8391abbb464293e9efe2bbbf733'
-
+NC = 16 #no cores to use
 # read table of names retrieved from fishbase
-tab <- read.csv('names_fishbase.csv')
+tab <- read.csv('proc/names_fishbase.csv',stringsAsFactors = F)
+names <- unique(tab$name_synonym)
 
-st <- Sys.time()
+# st <- Sys.time()
 iucn <- parallel::mcmapply(function(i) {
-  syn <- rl_synonyms(tab$name[i],key=token)$result
+  syn <- rl_synonyms(names[i],key=token)$result
   if(length(syn) > 0){
-    syn$name_src = tab$name[i]
+    syn$name_src = names[i]
     res <- syn %>%
       select(id_iucn = accepted_id, 
              name_iucn = accepted_name, 
@@ -24,9 +25,12 @@ iucn <- parallel::mcmapply(function(i) {
       id_iucn = NA, 
       name_iucn = NA, 
       name_iucn_synonym = NA, 
-      name_src = tab$name[i])
+      name_src = names[i])
   }
   return(res)
-},1:100,SIMPLIFY = FALSE,mc.cores = 10) %>% do.call('rbind',.)
-Sys.time() - st
-nrow(iucn)
+},1:20,SIMPLIFY = FALSE,mc.cores = NC) %>% 
+  do.call('rbind',.) %>%
+  distinct() # removes eventual duplicated rows
+# Sys.time() - st
+
+write.csv(iucn,'proc/iucn_names.csv',row.names = F)
