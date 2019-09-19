@@ -4,7 +4,7 @@
 
 # check with IUCN names
 library(valerioUtils)
-libinv('rredlist','dplyr')
+libinv(c('rredlist','dplyr'))
 
 token <- 'd361026f05b472e57b0ffe1fa5c9a768aaf3d8391abbb464293e9efe2bbbf733'
 NC = 16 #no cores to use
