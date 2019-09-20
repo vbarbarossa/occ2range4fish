@@ -8,7 +8,7 @@ diag <- function(df,name_df = '',file_out = ''){
   cat('Dataset: ',name_df,'\n',
   'No. records: ',prettyNum(nrow(df),big.mark = ','),'\n',
   'No. species: ',prettyNum(length(unique(df$name)),big.mark = ','),'\n\n\n',
-  file = file_out)
+  file = file_out,append = T)
 }
 
 # read reference names that should be used to extract species from the datasets----------------------------
@@ -36,8 +36,7 @@ fishnet <- vroom(paste0(dir_data,'fishnet2/fishnet2.csv')) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   filter(name %in% filter_names)
 diag(fishnet,'fishnet2','filtering_occurrence_datasets_diag.log')
-#~4M occ
-#62,747 names
+
 
 #gbif
 gbif <- vroom(paste0(dir_data,'gbif/actinopterygii.csv')) %>%
@@ -45,8 +44,7 @@ gbif <- vroom(paste0(dir_data,'gbif/actinopterygii.csv')) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   filter(name %in% filter_names)
 diag(gbif,'gbif','filtering_occurrence_datasets_diag.log')
-#~17M occ
-#62,747 names
+
 
 #portalbiodiversidade.icmbio.gov.br
 bra <- vroom(paste0(dir_data,'portalbiodiversidade.icmbio.gov.br/portalbio_export_17-09-2019-10-21-11.csv')) %>%
@@ -54,8 +52,7 @@ bra <- vroom(paste0(dir_data,'portalbiodiversidade.icmbio.gov.br/portalbio_expor
   .[.$lon != "Acesso Restrito" & .$name != "Sem Informações",] %>%
   filter(name %in% filter_names)
 diag(bra,'portalbiodiversidade.icmbio.gov.br','filtering_occurrence_datasets_diag.log')
-#~80k occ
-#2,701 names
+
 
 #splink.org
 splink <- vroom(paste0(dir_data,'splink.org/speciesLink_all_112728_20190917101630.txt')) %>%
@@ -113,4 +110,5 @@ occ_total <- rbind(occ_nosyn,occ_syn) %>%
   distinct()
 diag(occ_total,'final occurrence records cleaned and checked for synonyms','filtering_occurrence_datasets_diag.log')
 
-
+vroom_write(occ_total,'proc/compiled_occurrence_records.tsv.gz')
+saveRDS(occ_total,'proc/compiled_occurrence_records.rds')
