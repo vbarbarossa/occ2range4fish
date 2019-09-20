@@ -8,6 +8,10 @@
 library(valerioUtils)
 libinv(c('dplyr','purrr','rfishbase'))
 
+# directory where table should be written
+dir_out <- dir_('proc/')
+
+
 # read species in fishbase-----------------------------------------------------------------
 # set fishbase database version (latest available)
 options(FISHBASE_VERSION="19.04")
@@ -23,12 +27,19 @@ fb_syn <- unique(fb$Species) %>%
   select(name = synonym, name_synonym = Species) %>%
   distinct() # removes duplicated rows
 
+write.csv(fb_syn,paste0(dir_out,'names_fishbase.csv'),row.names = F)
+
+
 # read species compiled by Tedesco et al. 2018 Scientific Data-----------------------------
 ted <- read.csv('../data/Tedesco/Occurrence_Table.csv',sep=';') %>%
   select(name = X6.Fishbase.Valid.Species.Name,
          name_synonym = X2.Species.Name.in.Source) %>%
   mutate(name = gsub('\\.',' ',name),name_synonym = gsub('\\.',' ',name)) %>% #fix sep names
   distinct() # removes duplicated rows
+
+write.csv(ted,paste0(dir_out,'names_tedesco.csv'),row.names = F)
+
+
 # combine the sources----------------------------------------------------------------------
 fb_syn$dataset = 'fb'
 ted$dataset = 'ted'
@@ -38,12 +49,8 @@ tab <- rbind(fb_syn,ted) %>%
   distinct(name,name_synonym,.keep_all = T) %>%
   arrange(name)
 
-# write tables-----------------------------------------------------------------------------
-dir_out <- dir_('proc/')
-
-write.csv(fb_syn,paste0(dir_out,'names_fishbase.csv'),row.names = F)
-write.csv(ted,paste0(dir_out,'names_tedesco.csv'),row.names = F)
 write.csv(tab,paste0(dir_out,'names_fishbase_and_tedesco.csv'),row.names = F)
+
 
 # # could further check synonyms with taxize
 # library(taxize)
