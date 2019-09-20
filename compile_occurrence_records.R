@@ -14,12 +14,6 @@ diag <- function(df,name_df = '',file_out = ''){
 # read reference names that should be used to extract species from the datasets----------------------------
 tab <- read.csv('proc/names_fishbase.csv',stringsAsFactors = F)
 
-# separate unique names from names with synonyms for later use
-tab_names <- tab %>%
-  filter(name == name_synonym)
-tab_syn <- tab %>%
-  filter(name != name_synonym)
-
 #assign names that will be used for filtering
 filter_names <- unique(tab$name_synonym)
 
@@ -92,15 +86,19 @@ lonlat_to_exclude <- lapply(strsplit(paste0(occ$lon,occ$lat),''),
   do.call('c',.)
 
 # and filter occ
-cat('Removing ',prettyNum(sum(lonlat_to_exclude),big.mark = ','),' records with letters in coordinates\n')
+cat('Removing ',prettyNum(sum(lonlat_to_exclude),big.mark = ','),' records with letters in coordinates\n',
+    file = 'filtering_occurrence_datasets_diag.log')
 occ <- occ %>%
   filter(!lonlat_to_exclude) %>%
   mutate(name,lon = as.numeric(lon),lat = as.numeric(lat)) # transform lat lon to numeric
 
 
 # merge with fishbase synonyms----------------------------------------------------------------------------
-# adjust columns of reference table for synonyms
-tab_syn <- tab_syn %>% select(name_fishbase = name,name = name_synonym)
+
+# get only synonyms table and adjust columns name
+tab_syn <- tab %>%
+  filter(name != name_synonym) %>% 
+  select(name_fishbase = name,name = name_synonym)
 
 occ_syn <- right_join(occ,tab_syn,by='name') %>% #select only records that are synonyms
   select(name = name_fishbase,lon,lat) # and assign the fishbase name to the name
@@ -108,11 +106,11 @@ occ_nosyn <- occ %>%
   filter(!name %in% tab_syn$name)
 
 diag(occ_nosyn,'merged occurrence records (no synonyms)','filtering_occurrence_datasets_diag.log')
-diag(occ_nosyn,'additional merged occurrence records from fishbase synonyms','filtering_occurrence_datasets_diag.log')
+diag(occ_syn,'additional merged occurrence records from fishbase synonyms','filtering_occurrence_datasets_diag.log')
 
 occ_total <- rbind(occ_nosyn,occ_syn) %>%
   arrange(name) %>%
   distinct()
-diag(occ_nosyn,'final occurrence records cleaned and checked for synonyms','filtering_occurrence_datasets_diag.log')
+diag(occ_total,'final occurrence records cleaned and checked for synonyms','filtering_occurrence_datasets_diag.log')
 
 
