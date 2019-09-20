@@ -29,6 +29,7 @@ iucn <- parallel::mcmapply(function(i) {
       name_iucn_synonym = NA, 
       name_src = names[i])
   }
+  print(i)
   return(res)
 },1:length(names),SIMPLIFY = FALSE,mc.cores = NC) %>% 
   do.call('rbind',.) %>%
