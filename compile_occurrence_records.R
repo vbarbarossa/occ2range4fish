@@ -84,7 +84,8 @@ lonlat_to_exclude <- lapply(strsplit(paste0(occ$lon,occ$lat),''),
 
 # and filter occ
 cat('Removing ',prettyNum(sum(lonlat_to_exclude),big.mark = ','),' records with letters in coordinates\n',
-    file = 'filtering_occurrence_datasets_diag.log')
+    file = 'filtering_occurrence_datasets_diag.log',append = T)
+
 occ <- occ %>%
   filter(!lonlat_to_exclude) %>%
   mutate(name,lon = as.numeric(lon),lat = as.numeric(lat)) # transform lat lon to numeric
@@ -108,6 +109,7 @@ diag(occ_syn,'additional merged occurrence records from fishbase synonyms','filt
 occ_total <- rbind(occ_nosyn,occ_syn) %>%
   arrange(name) %>%
   distinct()
+
 diag(occ_total,'final occurrence records cleaned and checked for synonyms','filtering_occurrence_datasets_diag.log')
 
 vroom_write(occ_total,'proc/compiled_occurrence_records.tsv.gz')
