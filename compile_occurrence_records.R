@@ -21,12 +21,12 @@ filter_names <- unique(tab$name_synonym)
 # setup location of datasets
 dir_data <- '../data/fish_databases/'
 
-# ala.org.ay
+# ala.org.au
 ala <- vroom(paste0(dir_data,'ala.org.au/Fishes-brief.csv'),delim = ',') %>%
   select(name = scientificName,lon = decimalLongitude,lat = decimalLatitude) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   filter(name %in% filter_names)
-diag(ala,'ala.org.ay','filtering_occurrence_datasets_diag.log')
+diag(ala,'ala.org.au','filtering_occurrence_datasets_diag.log')
 
 #boldsystems #not implemented
 
