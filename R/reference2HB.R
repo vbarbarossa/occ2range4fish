@@ -3,12 +3,11 @@
 # to the HydroBASINS units (level 12)
 # should output a table with species name and corresponding HB ids
 
-#sbatch --array=1-11
 # get the array number from environment
 g <- as.numeric(Sys.getenv("SLURM_ARRAY_TASK_ID"))
 
 #no groups to split the data into (= NO ARRAY)
-N = 20
+N = as.numeric(Sys.getenv("SLURM_ARRAY_TASK_MAX")) #not tested
 
 # set number of cores
 NC = 22
