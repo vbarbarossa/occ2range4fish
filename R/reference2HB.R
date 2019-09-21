@@ -16,8 +16,12 @@ NC = 22
 library(valerioUtils)
 libinv(c('dplyr','sf'))
 
+HB_lev <- '08'
 # set data directory where hydrobasins folder is store
-dir_data <- '../data/'
+dir_HB <- '../data/HydroBASINS/global_lev08/'
+
+# define output directory where to store chunked results
+dir_out <- dir_('proc/occurrence_records_on_hb08/')
 
 # load occurrence data compiled in previous scripts
 occ <- readRDS('proc/compiled_occurrence_records.rds') 
@@ -32,43 +36,22 @@ for(i in 1:N){
   list_names[[i]] <- names(rs[seq(i,length(rs),N)])
 }
 
-# create a list of filtered records based on list_names and convert to sf spatial points
-# each element contains a tibble with selected records and geometry
-# list_records <- lapply(list_names,function(x){
-#   # sinlge point features
-#   p <- occ %>% 
-#     filter(name %in% x) %>%
-#     filter(!is.na(lon) & !is.na(lat)) %>% #make sure there are no NAs in the coords
-#     filter(lon >= -180 & lon <= 180) %>%
-#     filter(lat >= -90 & lat <= 90) %>%
-#     st_as_sf(coords = c('lon','lat'),crs=4326) #convert to sf
-#   # multipoint features
-#   mp <- lapply(split(p,p$name),summarize) %>%
-#     do.call('rbind',.) %>%
-#     mutate(name = unique(p$name)) %>%
-#     select(name,geometry) %>%
-#     st_cast('MULTIPOINT')
-#   return(mp)
-# })
-# sinlge point features
-x <- list_names[[g]]
-p <- occ %>% 
+x <- list_names[[g]] # if cannot run a multicore array, then simply loop with g index
+# create multipoint features per species
+pts <- occ %>% 
   filter(name %in% x) %>%
   filter(!is.na(lon) & !is.na(lat)) %>% #make sure there are no NAs in the coords
   filter(lon >= -180 & lon <= 180) %>%
   filter(lat >= -90 & lat <= 90) %>%
-  st_as_sf(coords = c('lon','lat'),crs=4326) #convert to sf
-# multipoint features
-pts <- lapply(split(p,p$name),summarize) %>%
-  do.call('rbind',.) %>%
-  mutate(name = unique(p$name)) %>%
-  select(name,geometry) %>%
+  st_as_sf(coords = c('lon','lat'),crs=4326) %>% #convert to sf
+  group_by(name) %>% # define grouping class
+  summarize() %>% # multipoint features
   st_cast('MULTIPOINT')
 
-# load HydroBASINS lev 12 data----------------------------------------------------------------------------
+# load HydroBASINS 12 data-----------------------------------------------------------------------------------
 hb_cont <- list()
 continents <- c('af','ar','as','au','eu','gr','na','sa','si')
-for(i in seq_along(continents)) hb_cont[[i]] <- read_sf(paste0(dir_data,'HydroBASINS/global_lev12/hybas_',continents[i],'_lev12_v1c.shp'))
+for(i in seq_along(continents)) hb_cont[[i]] <- read_sf(paste0(dir_HB,'hybas_',continents[i],'_lev',HB_lev,'_v1c.shp'))
 
 # define function that extract a table after intersecting HB and occ
 define_intersection <- function(hb,r){
@@ -82,14 +65,9 @@ define_intersection <- function(hb,r){
   return(tab)
 }
 
-# define output directory where to store chunked results
-dir_out <- dir_('proc/occurrence_records_on_hb/')
-
 # split the data frame in NC chunks
-# pts <- list_records[[g]]
-n <- NC-1
-nr <- nrow(pts)
-pts_list <- split(pts, rep(1:ceiling(nr/n), each=n, length.out=nr))
+chunk2 <- function(x,n) split(x, cut(1:nrow(pts), n, labels = FALSE))
+pts_list <- chunk2(pts,NC)
 
 parallel::mcmapply(function(n){
   
