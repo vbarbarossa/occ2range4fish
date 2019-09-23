@@ -21,7 +21,7 @@ HB_lev <- '08'
 dir_HB <- '../data/HydroBASINS/global_lev08/'
 
 # define output directory where to store chunked results
-dir_out <- dir_('proc/occurrence_records_on_hb08/')
+dir_out <- dir_('proc/occurrence_records_on_hb08_mollweide/')
 
 # load occurrence data compiled in previous scripts
 occ <- readRDS('proc/compiled_occurrence_records.rds') 
@@ -46,12 +46,17 @@ pts <- occ %>%
   st_as_sf(coords = c('lon','lat'),crs=4326) %>% #convert to sf
   group_by(name) %>% # define grouping class
   summarize() %>% # multipoint features
-  st_cast('MULTIPOINT')
+  st_cast('MULTIPOINT') %>%
+  st_transform(54009) # project to mollweide equal area
 
 # load HydroBASINS 12 data-----------------------------------------------------------------------------------
 hb_cont <- list()
 continents <- c('af','ar','as','au','eu','gr','na','sa','si')
-for(i in seq_along(continents)) hb_cont[[i]] <- read_sf(paste0(dir_HB,'hybas_',continents[i],'_lev',HB_lev,'_v1c.shp'))
+for(i in seq_along(continents)){
+  hb_cont[[i]] <- read_sf(paste0(dir_HB,'hybas_',continents[i],'_lev',HB_lev,'_v1c.shp')) %>%
+    st_transform(54009) # project to mollweide equal area
+} 
+  
 
 # define function that extract a table after intersecting HB and occ
 define_intersection <- function(hb,r){
