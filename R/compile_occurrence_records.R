@@ -9,10 +9,16 @@ file_diag <- 'filtering_occurrence_datasets_diag.log'
 
 diag <- function(df,name_df = '',file_out = '',append = T){
   
-  cat('Dataset: ',name_df,'\n',
-  'No. records: ',prettyNum(nrow(df),big.mark = ','),'\n',
-  'No. species: ',prettyNum(length(unique(df$name)),big.mark = ','),'\n\n\n',
-  file = file_out,append = append)
+  if(file_out == ''){
+    cat('Dataset: ',name_df,'\n',
+        'No. records: ',prettyNum(nrow(df),big.mark = ','),'\n',
+        'No. species: ',prettyNum(length(unique(df$name)),big.mark = ','),'\n\n\n')
+  }else{
+    cat('Dataset: ',name_df,'\n',
+        'No. records: ',prettyNum(nrow(df),big.mark = ','),'\n',
+        'No. species: ',prettyNum(length(unique(df$name)),big.mark = ','),'\n\n\n',
+        file = file_out,append = append)
+  }
 }
 
 # read reference names that should be used to extract species from the datasets----------------------------
@@ -34,7 +40,7 @@ rm_author <- function(x){
     if(s3[[1]][1] %in% LETTERS){
       return(
         paste(unlist(s)[1:2],collapse=' ')
-        )
+      )
     }else{
       return(x)
     }
@@ -45,14 +51,14 @@ rm_author <- function(x){
 
 # function that removes anything after , or ( and trailing capitals
 clean_binomial <- function(names){
-    cl <- lapply(strsplit(names,','),function(x) x[[1]][1]) %>% 
+  cl <- lapply(strsplit(names,','),function(x) x[[1]][1]) %>% 
     unlist() %>%
     strsplit(.,'\\(') %>%
     lapply(.,function(x) x[[1]][1]) %>%
     trimws() %>%
     lapply(.,rm_author) %>%
     unlist
-    return(cl)
+  return(cl)
 }
 
 # clean and filter datasets--------------------------------------------------------------------------------
@@ -65,6 +71,7 @@ ala <- vroom(paste0(dir_data,'ala.org.au/Fishes-brief.csv'),delim = ',') %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
   filter(name %in% filter_names)
+diag(ala,'ala.org.au')
 diag(ala,'ala.org.au',file_diag,append = F)
 
 #boldsystems #not implemented
@@ -75,6 +82,8 @@ fishnet <- vroom(paste0(dir_data,'fishnet2/fishnet2.csv')) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
   filter(name %in% filter_names)
+
+diag(fishnet,'fishnet2')
 diag(fishnet,'fishnet2',file_diag)
 
 
@@ -84,6 +93,7 @@ gbif <- vroom(paste0(dir_data,'gbif/actinopterygii.csv')) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
   filter(name %in% filter_names)
+diag(gbif,'gbif')
 diag(gbif,'gbif',file_diag)
 # need to add step to extract scientificName
 
@@ -94,6 +104,7 @@ bra <- vroom(paste0(dir_data,'portalbiodiversidade.icmbio.gov.br/portalbio_expor
   .[.$lon != "Acesso Restrito" & .$name != "Sem Informações",] %>%
   mutate(name = clean_binomial(name)) %>%
   filter(name %in% filter_names)
+diag(bra,'portalbiodiversidade.icmbio.gov.br')
 diag(bra,'portalbiodiversidade.icmbio.gov.br',file_diag)
 
 
@@ -103,6 +114,7 @@ splink <- vroom(paste0(dir_data,'splink.org/speciesLink_all_112728_2019091710163
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
   filter(name %in% filter_names)
+diag(splink,'splink.org')
 diag(splink,'splink.org',file_diag)
 
 # combine records from different datasets------------------------------------------------------------------
@@ -120,10 +132,12 @@ occ <- rbind(ala,fishnet,gbif,bra,splink) %>%
 unique_symbols <- strsplit(paste0(occ$lon,occ$lat),'') %>%
   do.call('c',.) %>%
   unique(.)
+
 # exclude everything that is not numeric (numbers,.,-)
+# checkout biogeo package also for more through corrections
 to_exclude <- unique_symbols[!unique_symbols %in% c(as.character(0:9),'.','-')] 
 lonlat_to_exclude <- lapply(strsplit(paste0(occ$lon,occ$lat),''),
-                          function(x) sum(x %in% to_exclude)> 0 ) %>%
+                            function(x) sum(x %in% to_exclude)> 0 ) %>%
   do.call('c',.)
 
 # and filter occ

@@ -10,7 +10,7 @@ libinv(c('dplyr','vroom','foreign','sf'))
 HB_lev <- '08'
 
 # files from ranges2HB script
-range2HB_files <- list.files(path = 'proc/occurrence_records_on_hb',HB_lev,'/', full.names = T)
+range2HB_files <- list.files(path = paste0('proc/occurrence_records_on_hb',HB_lev,'/'), full.names = T)
 
 # set data directory where hydrobasins folder is store
 dir_data <- '../data/'
@@ -102,6 +102,7 @@ area_iucn_HB <- iucn_HB %>%
 
 # compare area tab
 compare_area <- inner_join(area,area_iucn_HB)
-valerioUtils::r.squared(compare_area$range_area,compare_area$range_area_iucn) 
+lm(log10(range_area) ~ log10(range_area_iucn), data = compare_area) %>% summary()
+valerioUtils::r.squared(log10(compare_area$range_area),log10(compare_area$range_area_iucn))
 
 
