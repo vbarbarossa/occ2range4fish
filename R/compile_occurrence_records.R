@@ -23,11 +23,13 @@ diag <- function(df,name_df = '',file_out = '',append = T){
 
 # read reference names that should be used to extract species from the datasets----------------------------
 # tab <- read.csv('proc/names_fishbase.csv',stringsAsFactors = F)
-tab <- vroom(list.files('proc/',pattern = 'iucn_names',full.names = T))
+fishbase <- read.csv('proc/names_fishbase_and_tedesco.csv',stringsAsFactors = F)
+tab <- vroom(list.files('proc/',pattern = 'iucn_names',full.names = T)) %>%
+  filter(!is.na(name_src))
 
 #assign names that will be used for filtering
 # filter_names <- unique(tab$name_synonym)
-filter_names <- unique(c(tab$name_iucn,tab$name_iucn_synonym,tab$name_src)) %>%
+filter_names <- unique(c(tab$name_iucn,tab$name_iucn_synonym,tab$name_src,fishbase$name,fishbase$name_synonym)) %>%
   .[!is.na(.)]
 
 # functions to clean nomenclature--------------------------------------------------------------------------
@@ -70,7 +72,8 @@ ala <- vroom(paste0(dir_data,'ala.org.au/Fishes-brief.csv'),delim = ',') %>%
   select(name = scientificName,lon = decimalLongitude,lat = decimalLatitude) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
-  filter(name %in% filter_names)
+  filter(name %in% filter_names) %>%
+  distinct()
 diag(ala,'ala.org.au')
 diag(ala,'ala.org.au',file_diag,append = F)
 
@@ -81,21 +84,39 @@ fishnet <- vroom(paste0(dir_data,'fishnet2/fishnet2.csv')) %>%
   select(name = ScientificName,lon = Longitude,lat = Latitude) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
-  filter(name %in% filter_names)
+  filter(name %in% filter_names) %>%
+  distinct()
 
 diag(fishnet,'fishnet2')
 diag(fishnet,'fishnet2',file_diag)
 
 
-#gbif <<<<<<<<< problem with names, need to extract from string to match
-gbif <- vroom(paste0(dir_data,'gbif/actinopterygii.csv')) %>%
+#gbif
+gbif_o <- vroom(paste0(dir_data,'gbif/actinopterygii.csv'))
+
+# based on species
+gbifs <- gbif_o %>%
   select(name = species,lon = decimalLongitude,lat = decimalLatitude) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
   filter(name %in% filter_names)
+# based on scientific name
+gbifn <- gbif_o %>%
+  select(name = scientificName,lon = decimalLongitude,lat = decimalLatitude) %>%
+  .[!is.na(.$lon) & !is.na(.$name),] %>%
+  mutate(name = clean_binomial(name)) %>%
+  filter(name %in% filter_names)
+gbif <- rbind(gbifs,gbifn) %>%
+  distinct()
+
+# checknames <- gbif_o %>%
+#   mutate(species = clean_binomial(species),scientificName = clean_binomial(scientificName))
+# ss <- sort(table(checknames$species),decreasing = T)
+# sn <- sort(table(checknames$scientificName),decreasing = T)
+
 diag(gbif,'gbif')
 diag(gbif,'gbif',file_diag)
-# need to add step to extract scientificName
+rm(gbif_o) # unload gbif_o from memory
 
 
 #portalbiodiversidade.icmbio.gov.br
@@ -103,7 +124,8 @@ bra <- vroom(paste0(dir_data,'portalbiodiversidade.icmbio.gov.br/portalbio_expor
   select(name = Especie,lon = Longitude,lat = Latitude) %>%
   .[.$lon != "Acesso Restrito" & .$name != "Sem Informações",] %>%
   mutate(name = clean_binomial(name)) %>%
-  filter(name %in% filter_names)
+  filter(name %in% filter_names) %>%
+  distinct()
 diag(bra,'portalbiodiversidade.icmbio.gov.br')
 diag(bra,'portalbiodiversidade.icmbio.gov.br',file_diag)
 
@@ -113,7 +135,8 @@ splink <- vroom(paste0(dir_data,'splink.org/speciesLink_all_112728_2019091710163
   select(name = scientificname,lon = longitude,lat = latitude) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
-  filter(name %in% filter_names)
+  filter(name %in% filter_names) %>%
+  distinct()
 diag(splink,'splink.org')
 diag(splink,'splink.org',file_diag)
 
@@ -146,25 +169,49 @@ cat('Removing ',prettyNum(sum(lonlat_to_exclude),big.mark = ','),' records with 
 
 occ <- occ %>%
   filter(!lonlat_to_exclude) %>%
-  mutate(name,lon = as.numeric(lon),lat = as.numeric(lat)) # transform lat lon to numeric
+  mutate(name,lon = as.numeric(lon),lat = as.numeric(lat)) %>% # transform lat lon to numeric
+  filter(!is.na(lon) & !is.na(lat)) %>% #make sure there are no NAs in the coords
+  filter(lon >= -180 & lon <= 180) %>% # and no coords outside allowed boundaries
+  filter(lat >= -90 & lat <= 90)
 
 
 # merge with fishbase synonyms----------------------------------------------------------------------------
 
-# get only synonyms table and adjust columns name
-tab_syn <- tab %>%
-  filter(name != name_synonym) %>% 
-  select(name_fishbase = name,name = name_synonym)
+# read fishbase + tedesco synonym tab
+syn_fb <- fishbase %>%
+  as_tibble() %>%
+  select(name_ref = name,name = name_synonym)
 
-occ_syn <- right_join(occ,tab_syn,by='name') %>% #select only records that are synonyms
-  select(name = name_fishbase,lon,lat) # and assign the fishbase name to the name
+# get only synonyms table and adjust columns name
+syn_iucn <- tab %>%
+  filter(name_src != name_iucn_synonym) %>% 
+  select(name_ref = name_src,name = name_iucn_synonym)
+
+# which have different src and iucn name?
+# then consider the different iucn name as fishbase synonym
+diff_iucn_fb <- tab %>%
+  filter(!is.na(name_iucn)) %>%
+  filter(name_iucn != name_src) %>%
+  select(name_ref = name_src,name = name_iucn)
+
+tab_ref <- bind_rows(syn_fb,syn_iucn,diff_iucn_fb) %>%
+  filter(!is.na(name) & !is.na(name_ref)) %>%
+  distinct()
+
+tab_syn <- tab_ref %>%
+  filter(name_ref != name)
+
+occ_syn <- inner_join(occ,tab_syn,by='name') %>% #select only records that are synonyms
+  select(name = name_ref,lon,lat) %>% # and assign the fishbase name to the name
+  distinct()
+
 occ_nosyn <- occ %>%
-  filter(!name %in% tab_syn$name)
+  filter(name %in% unique(tab_ref$name_ref))
 
 diag(occ_nosyn,'merged occurrence records (no synonyms)',file_diag)
 diag(occ_syn,'additional merged occurrence records from fishbase synonyms',file_diag)
 
-occ_total <- rbind(occ_nosyn,occ_syn) %>%
+occ_total <- bind_rows(occ_nosyn,occ_syn) %>%
   arrange(name) %>%
   distinct()
 
