@@ -127,4 +127,6 @@ compare_area <- inner_join(area,area_iucn_HB)
 lm(log10(range_area) ~ log10(range_area_iucn), data = compare_area) %>% summary()
 valerioUtils::r.squared(log10(compare_area$range_area),log10(compare_area$range_area_iucn))
 
-
+pdf(paste0(dir_figs,'ranges_plot_vs.pdf'))
+plot(log10(compare_area$range_area),log10(compare_area$range_area_iucn))
+dev.off()
