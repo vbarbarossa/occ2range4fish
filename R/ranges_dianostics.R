@@ -10,7 +10,7 @@ libinv(c('dplyr','vroom','foreign','sf'))
 HB_lev <- '08'
 
 # files from ranges2HB script
-range2HB_files <- list.files(path = paste0('proc/occurrence_records_on_hb',HB_lev,'/'), full.names = T)
+range2HB_files <- list.files(path = paste0('proc/occurrence_records_on_hb',HB_lev,'_mollweide/'), full.names = T)
 
 # set data directory where hydrobasins folder is store
 dir_data <- '../data/'
@@ -91,14 +91,36 @@ dev.off()
 # hmmm iucn area looks weird should compare both of them based on HB12 table
 # then retrieve data from connectfish
 
-iucn_HB <- readRDS(paste0(dir_data,'hybas12_fish_w_area.rds')) %>%
-  as_tibble() %>%
-  select(name = binomial, HYBAS_ID, SUB_AREA) %>%
-  arrange(name) %>%
-  distinct()
+# iucn_HB <- readRDS(paste0(dir_data,'hybas12_fish_w_area.rds')) %>%
+#   as_tibble() %>%
+#   select(name = binomial, HYBAS_ID, SUB_AREA) %>%
+#   arrange(name) %>%
+#   distinct()
+# count_iucn_HB <- iucn_HB %>%
+#   group_by(HYBAS_ID) %>%
+#   summarize(no_species = n())
+
+# iucn ranges based on hybas native from IUCN website
+iucn_HB <- vroom(paste0(dir_data,'IUCN/FW_FISH_20190923/fish_hybas_table.csv')) %>%
+  filter(presence %in% c(1,2)) %>%
+  rename(HYBAS_ID = hybas_id)
+# iucn_HB_sf <- right_join(HB_sf,iucn_HB)
+
+count_iucn_HB <- iucn_HB %>%
+  group_by(HYBAS_ID) %>%
+  summarize(no_species = n()) %>%
+  right_join(HB_sf,.)
+
+pdf(paste0(dir_figs,'ranges_count_',HB_lev,'_iucn.pdf'))
+plot(count_iucn_HB['no_species'],border = NA)
+dev.off()
+
 area_iucn_HB <- iucn_HB %>%
+  left_join(.,HB_sf) %>%
+  select(name = binomial,SUB_AREA) %>%
   group_by(name) %>%
-  summarize(range_area_iucn = sum(SUB_AREA))
+  summarize(range_area_iucn = sum(SUB_AREA,na.rm=T)) %>%
+  filter(range_area_iucn > 0)
 
 # compare area tab
 compare_area <- inner_join(area,area_iucn_HB)
