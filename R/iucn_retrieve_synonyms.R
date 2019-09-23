@@ -12,6 +12,9 @@ N = 20
 #no cores to use
 NC = 22
 
+# start group (in case need to rerun not from begining)
+start_no = 14
+
 # output folder
 dir_out <- 'proc/iucn_synonyms/'
 
@@ -34,7 +37,7 @@ set.seed(12345)
 chunk2 <- function(x,n) split(x, cut(seq_along(x), n, labels = FALSE))
 list_names <- chunk2(names,N)
 
-for(g in 1:N){
+for(g in start_no:N){
   print(paste0('Processing group ',g,'/',N,'..'))
   
   names <- list_names[[g]]
