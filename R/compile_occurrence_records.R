@@ -100,13 +100,15 @@ gbifs <- gbif_o %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
   filter(name %in% filter_names)
+
 # based on scientific name
 gbifn <- gbif_o %>%
   select(name = scientificName,lon = decimalLongitude,lat = decimalLatitude) %>%
   .[!is.na(.$lon) & !is.na(.$name),] %>%
   mutate(name = clean_binomial(name)) %>%
   filter(name %in% filter_names)
-gbif <- rbind(gbifs,gbifn) %>%
+
+gbif <- bind_rows(gbifs,gbifn) %>%
   distinct()
 
 # checknames <- gbif_o %>%
@@ -151,7 +153,7 @@ occ <- rbind(ala,fishnet,gbif,bra,splink) %>%
 # difficult to convert without knowing the CRS, filter out!
 # create vector to report rows with letters in latitude or longitude
 
-# understand unique symbols to take out
+# understand unique symbols to take outsbatch 
 unique_symbols <- strsplit(paste0(occ$lon,occ$lat),'') %>%
   do.call('c',.) %>%
   unique(.)
