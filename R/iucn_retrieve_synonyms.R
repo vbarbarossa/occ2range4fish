@@ -12,14 +12,22 @@ N = 20
 #no cores to use
 NC = 22
 
+# output folder
+dir_out <- 'proc/iucn_synonyms/'
+
 # check with IUCN names
 library(valerioUtils)
 libinv(c('rredlist','dplyr'))
 
 token <- 'd361026f05b472e57b0ffe1fa5c9a768aaf3d8391abbb464293e9efe2bbbf733'
 # read table of names retrieved from fishbase
-tab <- read.csv('proc/names_fishbase.csv',stringsAsFactors = F)
-names <- unique(tab$name_synonym)
+fishbase <- read.csv('proc/names_fishbase_and_tedesco.csv',stringsAsFactors = F)
+iucn <- lapply(1:2,
+               function(x) foreign::read.dbf(paste0('../data/IUCN/FW_FISH_20181113/FW_FISH_PART_',x,'.dbf'))) %>%
+  do.call('rbind',.)
+
+names <- unique(c(fishbase$name_synonym,iucn$binomial)) %>%
+  .[!is.na(.)]
 
 # select based on array
 set.seed(12345)
@@ -55,6 +63,6 @@ for(g in 1:N){
     distinct() # removes eventual duplicated rows
   # Sys.time() - st
   
-  write.csv(iucn,paste0('proc/iucn_names_',g,'.csv'),row.names = F)
+  write.csv(iucn,paste0(dir_(dir_out),'iucn_names_',g,'.csv'),row.names = F)
   
 }
