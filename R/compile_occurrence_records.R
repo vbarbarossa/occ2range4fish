@@ -24,13 +24,15 @@ diag <- function(df,name_df = '',file_out = '',append = T){
 # read reference names that should be used to extract species from the datasets----------------------------
 # tab <- read.csv('proc/names_fishbase.csv',stringsAsFactors = F)
 fishbase <- read.csv('proc/names_fishbase_and_tedesco.csv',stringsAsFactors = F)
-tab <- vroom(list.files('proc/',pattern = 'iucn_names',full.names = T)) %>%
+tab <- vroom(list.files('proc/iucn_synonyms/',pattern = 'iucn_names',full.names = T)) %>%
   filter(!is.na(name_src))
 
 #assign names that will be used for filtering
 # filter_names <- unique(tab$name_synonym)
 filter_names <- unique(c(tab$name_iucn,tab$name_iucn_synonym,tab$name_src,fishbase$name,fishbase$name_synonym)) %>%
   .[!is.na(.)]
+cat('Using ',prettyNum(length(filter_names),big.mark = ','),' species names for records extraction\n',
+    file = file_diag)
 
 # functions to clean nomenclature--------------------------------------------------------------------------
 
@@ -75,7 +77,7 @@ ala <- vroom(paste0(dir_data,'ala.org.au/Fishes-brief.csv'),delim = ',') %>%
   filter(name %in% filter_names) %>%
   distinct()
 diag(ala,'ala.org.au')
-diag(ala,'ala.org.au',file_diag,append = F)
+diag(ala,'ala.org.au',file_diag)
 
 #boldsystems #not implemented
 
