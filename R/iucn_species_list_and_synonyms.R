@@ -13,7 +13,7 @@ N = 20
 NC = 22
 
 # start group (in case need to rerun not from begining)
-start_no = 14
+start_no = 1
 
 # output folder
 dir_out <- 'proc/iucn_synonyms/'
