@@ -50,7 +50,7 @@ count <- tab_HB %>%
 
 # load sf features for HB
 HB_sf <- lapply(c('af','ar','as','au','eu','gr','na','sa','si'),
-             function(x) st_read(paste0(dir_data,'HydroBASINS/global_lev',HB_lev,'/hybas_',x,'_lev',HB_lev,'_v1c.shp'))) %>%
+                function(x) st_read(paste0(dir_data,'HydroBASINS/global_lev',HB_lev,'/hybas_',x,'_lev',HB_lev,'_v1c.shp'))) %>%
   do.call('rbind',.)
 
 count_sf <- right_join(HB_sf,count) # need to put first sf data to keep the sf type
@@ -144,3 +144,77 @@ cat('\n\nIUCN vs custom ranges\nR2: ',round(r2,3),'\nN: ',prettyNum(nrow(compare
 pdf(paste0(dir_figs,'ranges_plot_vs.pdf'))
 plot(log10(compare_area$range_area),log10(compare_area$range_area_iucn))
 dev.off()
+
+
+# try only for popular species, i.e. a lot of occ records
+# determine number of occ records per species
+count_occ <- occ %>%
+  group_by(name) %>%
+  summarize(no_occ = n())
+
+df <- list()
+g = 1
+for(i in c(0,10,20,50,100,200,500,1000,2000)){
+  # then filter compare area for species in this subset
+  ca_filtered <- compare_area %>%
+    filter(name %in% count_occ$name[count_occ$no_occ >= i])
+  df[[g]] <- data.frame(threshold = i,
+                        n = nrow(ca_filtered),
+                        R2 = valerioUtils::r.squared(log10(ca_filtered$range_area),log10(ca_filtered$range_area_iucn)))
+  cat('\n\nThreshold: ',i,'\nN: ',nrow(ca_filtered),'\nR2: ',valerioUtils::r.squared(log10(ca_filtered$range_area),log10(ca_filtered$range_area_iucn)))
+  g=g+1
+}
+df <- do.call('rbind',df)
+write.csv(df,'proc/compare_r2_IUCN.csv',row.names = F)
+
+# for NA where there is good coverage
+na <- occ %>%
+  filter(lon < -30 & lat > 18) %>%
+  group_by(name) %>%
+  summarize(no_occ = n())
+
+df <- list()
+g = 1
+for(i in c(0,10,20,50,100,200,500,1000,2000)){
+  # then filter compare area for species in this subset
+  ca_filtered <- compare_area %>%
+    filter(name %in% na$name[na$no_occ >= i])
+  df[[g]] <- data.frame(threshold = i,
+                        n = nrow(ca_filtered),
+                        R2 = valerioUtils::r.squared(log10(ca_filtered$range_area),log10(ca_filtered$range_area_iucn)))
+  cat('\n\nThreshold: ',i,'\nN: ',nrow(ca_filtered),'\nR2: ',valerioUtils::r.squared(log10(ca_filtered$range_area),log10(ca_filtered$range_area_iucn)))
+  g=g+1
+}
+df <- do.call('rbind',df)
+
+pdf(paste0(dir_figs,'ranges_plot_na_vs.pdf'))
+plot(log10(compare_area$range_area[compare_area$name %in% na$name]),log10(compare_area$range_area_iucn[compare_area$name %in% na$name]))
+dev.off()
+write.csv(df,'proc/compare_r2_IUCN_na.csv',row.names = F)
+
+# count_bas <- tab_HB %>%
+#   group_by(name) %>%
+#   summarize(no_bas = n())
+# 
+# for(i in c(0,10,20,50,100,200,500,1000,2000)){
+#   # then filter compare area for species in this subset
+#   ca_filtered <- compare_area %>%
+#     filter(name %in% count_bas$name[count_bas$no_bas >= i])
+#   cat('\n\nThreshold: ',i,'\nN: ',nrow(ca_filtered),'\nR2: ',valerioUtils::r.squared(log10(ca_filtered$range_area),log10(ca_filtered$range_area_iucn)))
+#   
+# }
+
+
+# plot only ranges not in IUCN
+count_diff <- tab_HB %>%
+  filter(!name %in% iucn_HB$binomial) %>%
+  group_by(HYBAS_ID) %>%
+  summarize(no_species = n()) %>%
+  right_join(HB_sf,.) # need to put first sf data to keep the sf type
+
+jpeg(paste0(dir_figs,'ranges_notInIUCN_count',HB_lev,'.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
+plot(st_transform(count_diff['no_species'],54030),border = NA)
+dev.off()
+
+
+

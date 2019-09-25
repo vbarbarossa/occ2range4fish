@@ -3,7 +3,7 @@
 # IUCN and custom compiled fish ranges
 
 library(valerioUtils)
-libinv(c('dplyr','vroom','foreign','sf'))
+libinv(c('dplyr','vroom','foreign','sf','rfishbase'))
 
 HB_lev <- '08'
 
@@ -33,36 +33,73 @@ custom_m <- right_join(HB,tab) %>%
   select(name,db,geometry) %>%
   st_cast('MULTIPOLYGON')
 
-  
+# merge with occ count
+count_occ <- readRDS('proc/compiled_occurrence_records.rds') %>%
+  group_by(name) %>%
+  summarize(no_occ = n())
+
+custom_m <- left_join(custom_m,count_occ) %>%
+  select(name,db,no_occ,geometry)
+
 st_write(custom_m,paste0(dir_('out/'),'custom_ranges_poly.gpkg'))
+write.csv(custom_m %>% as_tibble(),paste0(dir_('out/'),'custom_ranges_poly.csv'),row.names = F)
 
-# IUCN RANGES-----------------------------------------------------------------------------------------------------
-# load IUCN polygon ranges
-# not the hydrobasins tab as that is referenced on multiple HB levels and on the HB with lakes
-iucn <- lapply(1:2, #read_sf always returns a sf and tibble object
-               function(x) read_sf(paste0(dir_data,'IUCN/FW_FISH_20181113/FW_FISH_PART_',x,'.shp'))) %>%
-  do.call('rbind',.) %>%
-  filter(presence %in% c(1,2))# select only extant records
+# HABITAT TYPE FROM FISHBASE-----------------------------------------------------------------------------------------
+options(FISHBASE_VERSION="19.04")
 
-#<<<<<<<<<<<<<<<<<<<< need to merge only doubled poly, exclude others otherwise takes too long
-iucn_m <- iucn[100:300,] %>% 
-  rename(name = binomial) %>% #renames column for consistency with custom data
-  lwgeom::st_make_valid() %>% #avoid TopologyException error by buffering
-  group_by(name) %>% #groups by name for merging
-  summarise(do_union = T) %>% #merges records of same species
-  mutate(db = 'IUCN') %>%
-  select(name,db,geometry) %>%
-  st_cast('MULTIPOLYGON')
+# retrieve list of freshwater fish species available from fishbase
+habitat <- ecology(custom_m$name) %>%
+  select(name = Species, Stream, Lake = Lakes) %>%
+  distinct()
 
-st_write(iucn,paste0(dir_('out/'),'iucn_ranges_poly.gpkg'))
+habitat$OnlyLake <- 0
+habitat$OnlyLake[habitat$Lake == -1 & (habitat$Stream == 0 | is.na(habitat$Stream))] <- -1
 
-# MERGED RANGES--------------------------------------------------------------------------------------------------
-custom_diff <- custom_m %>%
-  filter(!name %in% iucn$name)
+write.csv(habitat,paste0(dir_('out/'),'custom_ranges_habitatFishbase.csv'),row.names = F)
 
-merged <- rbind(iucn,custom_diff)
 
-st_write(merged,paste0(dir_('out/'),'merged_ranges_poly.gpkg'))
+# NOT REALLY NEEDED TO RESHAPE IUCN DATA, DEPRECATED
+# # IUCN RANGES-----------------------------------------------------------------------------------------------------
+# # load IUCN polygon ranges
+# # not the hydrobasins tab as that is referenced on multiple HB levels and on the HB with lakes
+# iucn <- lapply(1:2, #read_sf always returns a sf and tibble object
+#                function(x) read_sf(paste0(dir_data,'IUCN/FW_FISH_20181113/FW_FISH_PART_',x,'.shp'))) %>%
+#   do.call('rbind',.) %>%
+#   filter(presence %in% c(1,2)) %>% # select only extant records
+#   rename(name = binomial)#renames column for consistency with custom data
+# 
+# row_count <- iucn %>%
+#   as_tibble() %>%
+#   group_by(name) %>%
+#   summarize(count = n())
+# 
+# iucn_nomerge <- iucn %>%
+#   filter(name %in% row_count$name[row_count$count == 1]) %>%
+#   select(name,geometry)
+# 
+# iucn_merge <- iucn %>%
+#   filter(name %in% row_count$name[row_count$count > 1]) %>%
+#   arrange(name) %>%
+#   .[1:50,] %>%
+#   lwgeom::st_make_valid() %>% #avoid TopologyException error by buffering
+#   summarise(do_union = T) %>% #merges records of same species
+#   st_cast('MULTIPOLYGON')
+# 
+# iucn_m <- row_bind(iucn_nomerge,iucn_merge) %>%
+#   mutate(db = 'IUCN') %>%
+#   select(name,db,geometry) %>%
+#   st_cast('MULTIPOLYGON')
+# 
+#   
+# st_write(iucn_m,paste0(dir_('out/'),'iucn_ranges_poly.gpkg'))
+# 
+# # MERGED RANGES--------------------------------------------------------------------------------------------------
+# custom_diff <- custom_m %>%
+#   filter(!name %in% iucn$name)
+# 
+# merged <- rbind(iucn,custom_diff)
+# 
+# st_write(merged,paste0(dir_('out/'),'merged_ranges_poly.gpkg'))
 
 
 
