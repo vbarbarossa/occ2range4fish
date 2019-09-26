@@ -9,16 +9,17 @@
 library(valerioUtils)
 libinv(c('dplyr','vroom','foreign','sf'))
 
-file_diag <- 'ranges_diag.log'
+dir_out <- dir_('proc/ranges_diagnostics/')
+dir_data <- '../data/'
+
+file_diag <- paste0(dir_out,'ranges_diag.log')
 
 HB_lev <- '08'
 
 # files from ranges2HB script
 range2HB_files <- list.files(path = paste0('proc/occurrence_records_on_hb',HB_lev,'_mollweide/'), full.names = T)
 
-# set data directory where hydrobasins folder is store
-dir_data <- '../data/'
-dir_figs <- dir_('figs/')
+
 
 # compile table ranges
 tab <- lapply(range2HB_files,readRDS) %>%
@@ -55,16 +56,16 @@ HB_sf <- lapply(c('af','ar','as','au','eu','gr','na','sa','si'),
 
 count_sf <- right_join(HB_sf,count) # need to put first sf data to keep the sf type
 
-# pdf(paste0(dir_figs,'ranges_count',HB_lev,'.pdf'))
+# pdf(paste0(dir_out,'ranges_count',HB_lev,'.pdf'))
 # plot(count_sf['no_species'],border = NA)
 # dev.off()
 
-jpeg(paste0(dir_figs,'ranges_count',HB_lev,'.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
+jpeg(paste0(dir_out,'ranges_count',HB_lev,'.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
 plot(st_transform(count_sf['no_species'],54030),border = NA)
 dev.off()
 
 # save layer
-sf::st_write(count_sf,'proc/ranges_count_HB8.gpkg')
+sf::st_write(count_sf,paste0(dir_out,'ranges_count_HB8.gpkg'))
 
 # 3) plot also occurrence points-------------------------------------------------------------------------------------------
 occ <- readRDS('proc/compiled_occurrence_records.rds')
@@ -75,12 +76,12 @@ pts <- occ %>%
   filter(lat >= -90 & lat <= 90) %>%
   st_as_sf(coords = c('lon','lat'),crs=4326) #convert to sf
 
-jpeg(paste0(dir_figs,'occurrence_records.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
+jpeg(paste0(dir_out,'occurrence_records.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
 plot(st_geometry(st_transform(pts,54030)),cex = 0.01,pch=20)
 dev.off()
 
 # save layer
-sf::st_write(pts,'proc/occ_records.gpkg')
+sf::st_write(pts,paste0(dir_out,'occ_records.gpkg'))
 
 # 4) compare area with species in common with IUCN--------------------------------------------------------------------------
 
@@ -118,11 +119,11 @@ count_iucn_HB <- iucn_HB %>%
   summarize(no_species = n()) %>%
   right_join(HB_sf,.)
 
-# pdf(paste0(dir_figs,'ranges_count_',HB_lev,'_iucn.pdf'))
+# pdf(paste0(dir_out,'ranges_count_',HB_lev,'_iucn.pdf'))
 # plot(count_iucn_HB['no_species'],border = NA)
 # dev.off()
 
-jpeg(paste0(dir_figs,'ranges_count_',HB_lev,'_iucn.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
+jpeg(paste0(dir_out,'ranges_count_',HB_lev,'_iucn.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
 plot(count_iucn_HB['no_species'],border = NA)
 dev.off()
 
@@ -141,7 +142,7 @@ r2 <- valerioUtils::r.squared(log10(compare_area$range_area),log10(compare_area$
 cat('\n\nIUCN vs custom ranges\nR2: ',round(r2,3),'\nN: ',prettyNum(nrow(compare_area),big.mark = ','),
     file = file_diag,add=T)
 
-pdf(paste0(dir_figs,'ranges_plot_vs.pdf'))
+pdf(paste0(dir_out,'ranges_plot_vs.pdf'))
 plot(log10(compare_area$range_area),log10(compare_area$range_area_iucn))
 dev.off()
 
@@ -165,7 +166,7 @@ for(i in c(0,10,20,50,100,200,500,1000,2000)){
   g=g+1
 }
 df <- do.call('rbind',df)
-write.csv(df,'proc/compare_r2_IUCN.csv',row.names = F)
+write.csv(df,paste0(dir_out,'compare_r2_IUCN.csv'),row.names = F)
 
 # for NA where there is good coverage
 na <- occ %>%
@@ -187,10 +188,10 @@ for(i in c(0,10,20,50,100,200,500,1000,2000)){
 }
 df <- do.call('rbind',df)
 
-pdf(paste0(dir_figs,'ranges_plot_na_vs.pdf'))
+pdf(paste0(dir_out,'ranges_plot_na_vs.pdf'))
 plot(log10(compare_area$range_area[compare_area$name %in% na$name]),log10(compare_area$range_area_iucn[compare_area$name %in% na$name]))
 dev.off()
-write.csv(df,'proc/compare_r2_IUCN_na.csv',row.names = F)
+write.csv(df,paste0(dir_out,'compare_r2_IUCN_na.csv'),row.names = F)
 
 # count_bas <- tab_HB %>%
 #   group_by(name) %>%
@@ -212,7 +213,7 @@ count_diff <- tab_HB %>%
   summarize(no_species = n()) %>%
   right_join(HB_sf,.) # need to put first sf data to keep the sf type
 
-jpeg(paste0(dir_figs,'ranges_notInIUCN_count',HB_lev,'.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
+jpeg(paste0(dir_out,'ranges_notInIUCN_count',HB_lev,'.jpg'),type='cairo',width = 480*2, height = 480, res = 600,units = 'mm')
 plot(st_transform(count_diff['no_species'],54030),border = NA)
 dev.off()
 
