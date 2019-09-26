@@ -12,3 +12,5 @@ R routines to retrieve and reference occurrence records on HydroBASINS polygons 
 4. **reference2HB.R** References occurrence records to HydroBASINS polygons
 
 5. **ranges_diagnostics.R** Runs diagnostics on obtained species ranges (compare to IUCN, viz)
+
+6. **merge_polygons.R** Merges the referenced occurrences in MULTIPOLYGON features (one multipoly per species) and exports a GPKG feature collection
