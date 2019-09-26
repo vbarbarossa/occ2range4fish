@@ -42,7 +42,8 @@ custom_m <- left_join(custom_m,count_occ) %>%
   select(name,db,no_occ,geometry)
 
 st_write(custom_m,paste0(dir_('out/'),'custom_ranges_poly.gpkg'))
-write.csv(custom_m %>% as_tibble(),paste0(dir_('out/'),'custom_ranges_poly.csv'),row.names = F)
+write.csv(custom_m %>% as_tibble() %>% select(name,db,no_occ),
+          paste0(dir_('out/'),'custom_ranges_poly.csv'),row.names = F)
 
 # HABITAT TYPE FROM FISHBASE-----------------------------------------------------------------------------------------
 options(FISHBASE_VERSION="19.04")
