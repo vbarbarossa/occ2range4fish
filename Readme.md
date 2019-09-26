@@ -1,6 +1,6 @@
 # occ2range4fish
 
-R routines to retrieve and reference occurrence records on HydroBASINS polygons to obtain occurrence ranges
+R routines to compile fish occurrence records and reference them on HydroBASINS polygons to obtain species-specific geographical ranges
 
 
 1. **fishbase_species_list_and_synonyms.R** Retrieve freshwater fish species scientific names available from fishbase and Tedesco et al., 2018 (including a synonyms check)
