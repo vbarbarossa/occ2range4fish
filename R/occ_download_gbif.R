@@ -1,3 +1,4 @@
+# **DEPRECATED** Gbif records where downloaded manually
 
 # read species compiled by Tedesco et al. 2018 Scientific Data
 # and use it as a reference to select freshwater fish species
